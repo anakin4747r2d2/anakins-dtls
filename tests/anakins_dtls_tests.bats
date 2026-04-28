@@ -437,3 +437,27 @@ teardown() {
     run env -i PATH="$bash_dir" bash "$server_src"
     [[ "$output" == *"jq"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# Linux kernel Documentation .txt fallback
+# These properties are not in the hardcoded spec list but are documented in
+# Linux kernel Documentation/devicetree/bindings/**/*.txt files.
+# ---------------------------------------------------------------------------
+
+@test "hover over assigned-clocks returns documentation from Linux kernel docs" {
+    lsts_hover \
+        "linux/arch/arm64/boot/dts/freescale/imx91-phycore-som.dtsi:70:2" \
+        "fixtures/hover_assigned-clocks.rpc.json"
+}
+
+@test "hover over cache-line-size returns documentation from Linux kernel docs" {
+    lsts_hover \
+        "linux/arch/arm64/boot/dts/freescale/s32n79.dtsi:174:4" \
+        "fixtures/hover_cache-line-size.rpc.json"
+}
+
+@test "hover over capacity-dmips-mhz returns documentation from Linux kernel docs" {
+    lsts_hover \
+        "linux/arch/arm64/boot/dts/qcom/msm8953.dtsi:49:4" \
+        "fixtures/hover_capacity-dmips-mhz.rpc.json"
+}

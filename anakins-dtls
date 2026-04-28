@@ -693,6 +693,40 @@ chosen {
 # Hover dispatch
 # ---------------------------------------------------------------------------
 
+# Search .txt binding files for a property documentation paragraph.
+# Matches documentation-style entries: "- propname:" (not DTS code assignments).
+find_doc_in_txt_bindings() {
+    local prop="$1" linux_dir="$2"
+    local doc_dir="$linux_dir/Documentation/devicetree"
+    [[ -d "$doc_dir" ]] || return 1
+
+    local txt_file
+    txt_file="$(rg -l "^[[:space:]]*-[[:space:]]+${prop}[[:space:]]*:|^${prop}[[:space:]]+(is|are|property|specifies|contains|should|optional|required|phandle)" "$doc_dir" --glob '*.txt' 2>/dev/null | sort | head -1)"
+    [[ -z "$txt_file" ]] && return 1
+
+    awk -v prop="$prop" '
+        $0 ~ "^[[:space:]]*-[[:space:]]+"prop"[[:space:]]*:|^"prop"[[:space:]]+(is|are|property|specifies|contains|should|optional|required|phandle)" {
+            found = NR
+        }
+        found && NR >= found - 1 && NR <= found + 15 { print }
+        found && NR > found + 5 && /^$/ { exit }
+    ' "$txt_file"
+}
+
+# Search Linux kernel Documentation for a DT property.
+# Returns the documentation text or exits non-zero if not found.
+find_linux_doc_for_prop() {
+    local prop="$1" linux_dir="$2"
+    [[ -n "$linux_dir" ]] || return 1
+    # Only search for names that look like DT properties (no special chars)
+    [[ "$prop" =~ ^[a-zA-Z#][a-zA-Z0-9#_,-]*$ ]] || return 1
+
+    local result
+    result="$(find_doc_in_txt_bindings "$prop" "$linux_dir")"
+    [[ -n "$result" ]] && { printf '%s' "$result"; return 0; }
+    return 1
+}
+
 handle_hover() {
     local id="$1" text="$2" line="$3" character="$4"
     local word
@@ -755,7 +789,14 @@ handle_hover() {
             if [[ "$word" =~ ^pinctrl-[0-9]+$ ]]; then
                 send_hover "$id" "$PINCTRL_0_DOC"
             else
-                send_null "$id"
+                # Try Linux kernel Documentation .txt files
+                local linux_doc
+                linux_doc="$(find_linux_doc_for_prop "$word" "$LINUX_DIR")" || linux_doc=""
+                if [[ -n "$linux_doc" ]]; then
+                    send_hover "$id" "## ${word}\n\n**Source:** Linux kernel Documentation\n\n\`\`\`\n${linux_doc}\n\`\`\`"
+                else
+                    send_null "$id"
+                fi
             fi
             ;;
     esac
@@ -787,6 +828,9 @@ parse_request() {
 # ---------------------------------------------------------------------------
 
 declare -A DOC_TEXT
+root_uri=""
+root_path=""
+LINUX_DIR=""
 
 # ---------------------------------------------------------------------------
 # Main loop
@@ -797,6 +841,13 @@ while recv; do
 
     case "$method" in
         initialize)
+            root_uri="$(printf '%s' "$BODY" | jq -r '.params.rootUri // .params.workspaceFolders[0].uri // ""')"
+            root_path="${root_uri#file://}"
+            if [[ -d "${root_path}/tests/linux/Documentation/devicetree" ]]; then
+                LINUX_DIR="${root_path}/tests/linux"
+            elif [[ -d "${root_path}/linux/Documentation/devicetree" ]]; then
+                LINUX_DIR="${root_path}/linux"
+            fi
             send "{\"jsonrpc\":\"2.0\",\"id\":${id},\"result\":{\"capabilities\":{\"hoverProvider\":true,\"textDocumentSync\":{\"openClose\":true,\"change\":1}}}}"
             ;;
         initialized)
