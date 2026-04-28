@@ -19,18 +19,15 @@ teardown() {
 }
 
 @test "initialize advertises hoverProvider" {
-    lsts_initialize
-    echo "$LSTS_RESPONSE" | jq -e '.result.capabilities.hoverProvider == true'
+    lsts_initialize_capability '.result.capabilities.hoverProvider == true'
 }
 
 @test "initialize advertises openClose textDocumentSync" {
-    lsts_initialize
-    echo "$LSTS_RESPONSE" | jq -e '.result.capabilities.textDocumentSync.openClose == true'
+    lsts_initialize_capability '.result.capabilities.textDocumentSync.openClose == true'
 }
 
 @test "initialize advertises full textDocumentSync change" {
-    lsts_initialize
-    echo "$LSTS_RESPONSE" | jq -e '.result.capabilities.textDocumentSync.change == 1'
+    lsts_initialize_capability '.result.capabilities.textDocumentSync.change == 1'
 }
 
 # ---------------------------------------------------------------------------
