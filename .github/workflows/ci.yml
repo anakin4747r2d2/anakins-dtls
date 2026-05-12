@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
+      - name: Setup test fixtures
+        run: make setup
 
       - uses: cachix/install-nix-action@v27
         with:

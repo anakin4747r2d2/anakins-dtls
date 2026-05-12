@@ -5,8 +5,10 @@ PREFIX ?= /usr/local
 all: submodules
 	nix --extra-experimental-features 'nix-command flakes' develop --command make test lint
 
-submodules:
-	git submodule update --init --recursive
+setup:
+	bash tests/setup.sh
+
+submodules: setup
 
 lint:
 	shellcheck --external-sources --shell=bash --severity=warning anakins-dtls tests/*_tests.bats
